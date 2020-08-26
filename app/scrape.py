@@ -1,6 +1,11 @@
-from bs4 import BeautifulSoup as bs
-import requests
 from urllib.parse import urlencode
+import datetime
+
+import requests
+from bs4 import BeautifulSoup as bs
+
+from app import db
+from app.models import Auction, Listing
 
 BASE_URL = "https://www.scotchwhiskyauctions.com/"
 
@@ -92,15 +97,24 @@ def get_auctions():
     for auct in auctions:
         name = auct.find("span", class_="cattitle").text if auct.find("span", class_="cattitle") else ""
 
-        end_date = auct.find("span", class_="catdate").text[9:] if auct.find("span", class_="catdate") else ""
+        end_date_ = auct.find("span", class_="catdate").text[9:] if auct.find("span", class_="catdate") else ""
+
+        if end_date_.startswith("ugust"): # todo: fix properly
+            end_date_ = end_date_.replace("ugust", "August")
+
+        end_date = datetime.datetime.strptime(end_date_, "%B %d, %Y")
 
         num_lots_ = auct.find("span", class_="catproducts").text if auct.find("span", class_="catproducts") else ""
         num_lots = num_lots_[10:num_lots_.find(" lots in this auction.")]
 
         link = BASE_URL + auct["href"]
 
+        auct_code = name[4:-10].zfill(3)
+
+        auction = Auction(name, end_date, auct_code, num_lots, link, "Scotch Whisky Auctions")
+
+        db.session.add(auction)
         print(f"{name} - {end_date} - {num_lots} - {link}")
 
-
-# search_for_bottle()
-get_auctions()
+    db.session.commit()
+    print("Auctions added")

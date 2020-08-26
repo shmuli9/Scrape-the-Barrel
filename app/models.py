@@ -41,25 +41,25 @@ class Auction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256))
+    end_date = db.Column(db.DateTime())
 
     auction_code = db.Column(db.String(64), index=True)
 
-    num_lots = db.Column(db.String(64))
+    number_of_lots = db.Column(db.String(64))
     link = db.Column(db.String(512))
 
     scraped_date = db.Column(db.DateTime())
-    end_date = db.Column(db.DateTime())
     site = db.Column(db.String(256))
 
-    def __init__(self, id=None, name="", auction="", price="", auction_date="", site=""):
-        self.id = id
+    def __init__(self, name, end_date, auction_code, num_lots, link, site):
         self.name = name
+        self.end_date = end_date
 
-        self.price = price
-        self.auction = auction
+        self.auction_code = auction_code
+        self.number_of_lots = num_lots
+        self.link = link
+
         self.site = site
-
-        self.auction_date = auction_date
         self.scraped_date = datetime.now().replace(microsecond=0)
 
         current_app.logger.info(f"New Auction {self} added")
