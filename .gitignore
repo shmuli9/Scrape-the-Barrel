@@ -1,0 +1,6 @@
+.idea
+venv
+logs
+migrations
+
+app/app.db
