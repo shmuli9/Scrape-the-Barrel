@@ -41,4 +41,5 @@ def list_auctions():
         } for auction in Auction.query.all()
     ]
 
-    return jsonify(auctions), 200
+    # return jsonify(auctions), 200
+    return render_template("auctions.html", auctions=auctions)
