@@ -12,28 +12,33 @@ class Listing(db.Model):
     name = db.Column(db.String(256))
 
     price = db.Column(db.String(64))
-    auction = db.Column(db.String(64))
+
+    auction_code = db.Column(db.Integer, db.ForeignKey('auctions.auction_code'))
+    auction = db.relationship('Auction', back_populates="listings")
+
     link = db.Column(db.String(512))
-    auction_date = db.Column(db.DateTime())  # todo: change to relationship to Auctions
+    lot = db.Column(db.String(64), index=True)
 
     scraped_date = db.Column(db.DateTime())
     site = db.Column(db.String(256))
 
-    def __init__(self, id=None, name="", auction="", price="", auction_date="", site=""):
-        self.id = id
+    def __init__(self, lot="", name="", auction="", price="", link="", site=""):
         self.name = name
+        self.lot = lot
 
         self.price = price
         self.auction = auction
         self.site = site
 
-        self.auction_date = auction_date
+        self.link = link
+
+        # self.auction_date = auction_date
         self.scraped_date = datetime.now().replace(microsecond=0)
 
-        current_app.logger.info(f"New Listing {self} added")
+        # current_app.logger.info(f"New Listing {self} added")
 
     def __repr__(self):
-        return f'<Listing {self.name} - {self.lot} - {self.list_date}>'
+        return f'<Listing {self.name} - {self.auction}>'
 
 
 class Auction(db.Model):
@@ -43,13 +48,15 @@ class Auction(db.Model):
     name = db.Column(db.String(256))
     end_date = db.Column(db.DateTime())
 
-    auction_code = db.Column(db.String(64), index=True)
+    auction_code = db.Column(db.String(64), index=True, unique=True)
 
     number_of_lots = db.Column(db.String(64))
     link = db.Column(db.String(512))
 
     scraped_date = db.Column(db.DateTime())
     site = db.Column(db.String(256))
+
+    listings = db.relationship("Listing", back_populates="auction")
 
     def __init__(self, name, end_date, auction_code, num_lots, link, site):
         self.name = name
