@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, render_template
 
-from app.models import Auction, Listing
+from app.models import Auction
 from app.scrape import get_auctions, search_for_bottle
 
 app = Blueprint('app', __name__, url_prefix="/")
@@ -25,6 +25,11 @@ def bottle_search(bottle=None):
     # ]
 
     return jsonify()
+
+
+@app.route("/charts")
+def charts():
+    return render_template("charts.html", data={})
 
 
 @app.route("/auctions", methods=["GET"])
