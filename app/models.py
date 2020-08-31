@@ -19,10 +19,12 @@ class Listing(db.Model):
     link = db.Column(db.String(512))
     lot = db.Column(db.String(64), index=True)
 
+    sold = db.Column(db.Boolean())
+
     scraped_date = db.Column(db.DateTime())
     site = db.Column(db.String(256))
 
-    def __init__(self, lot="", name="", auction="", price="", link="", site=""):
+    def __init__(self, lot="", name="", auction="", price="", link="", sold=False, site=""):
         self.name = name
         self.lot = lot
 
@@ -31,6 +33,7 @@ class Listing(db.Model):
         self.site = site
 
         self.link = link
+        self.sold = sold
 
         # self.auction_date = auction_date
         self.scraped_date = datetime.now().replace(microsecond=0)

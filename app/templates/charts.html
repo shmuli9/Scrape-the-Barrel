@@ -8,52 +8,108 @@
 {% endblock %}
 
 {% block main_content %}
-    <h2>Auction List</h2>
+    <h2>Bottles</h2>
     <div class="row mb-5">
-        <canvas id="myChart" width="400" height="400"></canvas>
+        <div id="curve_chart" style="width: 900px; height: 500px"></div>
     </div>
+
+{#    <ul>#}
+{#        {% for bottle in data %}#}
+{#            {% for item in bottle %}#}
+{#                <li>#}
+{#                    {{ bottle[item] }}#}
+{#                </li>#}
+{#            {% endfor %}#}
+{#        {% endfor %}#}
+{#    </ul>#}
+
 {% endblock %}
 
 {% block js %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"
-            integrity="sha256-R4pqcOYV8lt7snxMQO/HSbVCFRPMdrhAFMH+vr9giYI=" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/underscore@1.11.0/underscore-min.js"></script>
     <script>
-        const ctx = $('#myChart');
-        let myChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-                datasets: [{
-                    label: '# of Votes',
-                    data: [12, 19, 3, 5, 2, 3],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
-                }
+
+        google.charts.load('current', {'packages': ['line'], 'language': 'en-gb'});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            let data3 = new google.visualization.DataTable();
+
+            let ds3 = {
+                "dates": [{% for date in data[0]["dates"] %}new Date("{{ date }}"),{% endfor %}],
+                "prices": {{ data[0]["prices"]|safe }},
+                "series": "{{ data[0]["series"]|safe }}"
             }
-        });
+
+            let rows = []
+            data3.addColumn('date', "Auctions");
+            rows.push(ds3["dates"])
+
+            data3.addColumn('number', ds3["series"]);
+            rows.push(ds3["prices"])
+
+            let package = _.zip(...rows)
+            data3.addRows(package)
+
+            const options = {
+                chart: {
+                    title: `Average price of bottles for ${ds3["series"]}`,
+                    subtitle: "Average determined for each month"
+                },
+                vAxis: {
+                    format: 'currency'
+                },
+                width: 900,
+                height: 500
+            };
+
+            {#let joinedData = google.visualization.data.join(data, data2, 'full', [[0, 0]], [1], [1]);#}
+
+            let chart = new google.charts.Line(document.getElementById('curve_chart'));
+
+            chart.draw(data3, google.charts.Line.convertOptions(options));
+        }
     </script>
+    {#    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"#}
+    {#            integrity="sha256-R4pqcOYV8lt7snxMQO/HSbVCFRPMdrhAFMH+vr9giYI=" crossorigin="anonymous"></script>#}
+    {#    <script>#}
+    {#        const ctx = $('#myChart');#}
+    {#        let myChart = new Chart(ctx, {#}
+    {#            type: 'line',#}
+    {#            data: {#}
+    {#                labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],#}
+    {#                datasets: [{#}
+    {#                    label: '# of Votes',#}
+    {#                    data: [12, 19, 3, 5, 2, 3],#}
+    {#                    backgroundColor: [#}
+    {#                        'rgba(255, 99, 132, 0.2)',#}
+    {#                        'rgba(54, 162, 235, 0.2)',#}
+    {#                        'rgba(255, 206, 86, 0.2)',#}
+    {#                        'rgba(75, 192, 192, 0.2)',#}
+    {#                        'rgba(153, 102, 255, 0.2)',#}
+    {#                        'rgba(255, 159, 64, 0.2)'#}
+    {#                    ],#}
+    {#                    borderColor: [#}
+    {#                        'rgba(255, 99, 132, 1)',#}
+    {#                        'rgba(54, 162, 235, 1)',#}
+    {#                        'rgba(255, 206, 86, 1)',#}
+    {#                        'rgba(75, 192, 192, 1)',#}
+    {#                        'rgba(153, 102, 255, 1)',#}
+    {#                        'rgba(255, 159, 64, 1)'#}
+    {#                    ],#}
+    {#                    borderWidth: 1#}
+    {#                }]#}
+    {#            },#}
+    {#            options: {#}
+    {#                scales: {#}
+    {#                    yAxes: [{#}
+    {#                        ticks: {#}
+    {#                            beginAtZero: true#}
+    {#                        }#}
+    {#                    }]#}
+    {#                }#}
+    {#            }#}
+    {#        });#}
+    {#    </script>#}
 {% endblock %}

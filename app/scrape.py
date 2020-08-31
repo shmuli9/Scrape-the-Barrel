@@ -28,23 +28,24 @@ def get_page(url):
 
 def search_for_bottle(term="macallan edition no1"):
     query = urlencode({"q": term})
-    per_page = urlencode({"perpage": 500})
 
-    search_page = get_page(
-        f"https://www.scotchwhiskyauctions.com/auctions/search/?{query}&area=&sort=mostrecent&order=asc&{per_page}")
+    def create_url(query):
+        per_page = urlencode({"perpage": 500})
+        return f"https://www.scotchwhiskyauctions.com/auctions/search/?{query}&area=all&sort=mostrecent" \
+               f"&order=asc&{per_page}"
+
+    search_page = get_page(create_url(query))
 
     soup = bs(search_page, "html.parser")
 
     pages = soup.select(".pages > a:not(.curpage)")
     # pages are shown twice on each page so halve
     num_pages = int(len(pages) / 2)
-    # pages = pages[:num_pages]
 
     further_search_pages = []
     for i in range(2, num_pages + 2):
         page_query = urlencode({"page": i, "q": term})
-        further_search_pages.append(
-            f"https://www.scotchwhiskyauctions.com/auctions/search/?{page_query}&area=&sort=mostrecent&order=asc&{per_page}")
+        further_search_pages.append(create_url(page_query))
 
     parse_listings(soup)
 
@@ -64,19 +65,26 @@ def parse_listings(soup):
 
         # id - for use in db and analysis
         id_ = prod.find("span", class_="prodlot").text.strip() if prod.find("span", class_="prodlot") else ""
-        id = id_[id_.find(": ") + 2:]
+        id = id_[id_.find(": ") + 2:].replace("-", "")
 
         # auction
         auction_code = id[:id.find("-")] if id.find("-") != -1 else id[:3]
         auction = Auction.query.filter_by(auction_code=auction_code).first()
 
+        # sold - defined by "Winning bid" text and lack of .reserve or .befirst
+        sold = not \
+            (
+                prod.find("span", class_="befirst")
+                or prod.find("span", class_="reserve")
+                or prod.find("span", class_="noreserve")
+            ) and bool(prod.find("span", class_="price"))
+
         # price
-        price = prod.find("span", class_="price").text.strip() if prod.find("span", class_="price") else ""
-        price = price.replace("£", "")
+        price = prod.find("span", class_="price").text.strip().replace("£", "") if sold else None
 
         link = BASE_URL + prod["href"]
 
-        listing = Listing(id.replace("-", ""), title, auction, price, link, "Scotch Whisky Auctions")
+        listing = Listing(id, title, auction, price, link, sold, "Scotch Whisky Auctions")
 
         db.session.add(listing)
 
@@ -97,11 +105,7 @@ def get_auctions():
     for auct in auctions:
         name = auct.find("span", class_="cattitle").text if auct.find("span", class_="cattitle") else ""
 
-        end_date_ = auct.find("span", class_="catdate").text[9:] if auct.find("span", class_="catdate") else ""
-
-        if end_date_.startswith("ugust"):  # todo: fix properly
-            end_date_ = end_date_.replace("ugust", "August")
-
+        end_date_ = auct.find("span", class_="catdate").text.split("on ")[1]
         end_date = datetime.datetime.strptime(end_date_, "%B %d, %Y")
 
         num_lots_ = auct.find("span", class_="catproducts").text if auct.find("span", class_="catproducts") else ""
