@@ -15,11 +15,9 @@
 
 {#    <ul>#}
 {#        {% for bottle in data %}#}
-{#            {% for item in bottle %}#}
-{#                <li>#}
-{#                    {{ bottle[item] }}#}
-{#                </li>#}
-{#            {% endfor %}#}
+{#            <li>#}
+{#                {{ bottle }}: {{ data[bottle] }}#}
+{#            </li>#}
 {#        {% endfor %}#}
 {#    </ul>#}
 
@@ -34,27 +32,35 @@
         google.charts.setOnLoadCallback(drawChart);
 
         function drawChart() {
-            let data3 = new google.visualization.DataTable();
+            let ds_names = []
 
-            let ds3 = {
-                "dates": [{% for date in data[0]["dates"] %}new Date("{{ date }}"),{% endfor %}],
-                "prices": {{ data[0]["prices"]|safe }},
-                "series": "{{ data[0]["series"]|safe }}"
-            }
+            {% for ds in data %}
+                {% set s_id = ds["series"]|replace(" ", "_")|replace("%", "like") %}
 
-            let rows = []
-            data3.addColumn('date', "Auctions");
-            rows.push(ds3["dates"])
+                ds_names.push("{{ s_id }}")
 
-            data3.addColumn('number', ds3["series"]);
-            rows.push(ds3["prices"])
+                let data_{{ s_id }} = new google.visualization.DataTable();
 
-            let package = _.zip(...rows)
-            data3.addRows(package)
+                let rows_{{ s_id }} = []
+
+                data_{{ s_id }}.addColumn('date', "Auctions");
+                rows_{{ s_id }}.push([{% for date in ds.dates %}new Date("{{ date }}"),{% endfor %}])
+
+                data_{{ s_id }}.addColumn('number', "{{ ds.series }}");
+                rows_{{ s_id }}.push({{ ds.prices }})
+
+                let zipped_rows_{{ s_id }} = _.zip(...rows_{{ s_id }})
+
+                console.log(rows_{{ s_id }}, zipped_rows_{{ s_id }})
+                data_{{ s_id }}.addRows(zipped_rows_{{ s_id }})
+
+            {% endfor %}
+
+
 
             const options = {
                 chart: {
-                    title: `Average price of bottles for ${ds3["series"]}`,
+                    title: `Average price of bottles for {% for ds in data %}{{ ds.series + ", " if not loop.last else ds.series }}{% endfor %}`,
                     subtitle: "Average determined for each month"
                 },
                 vAxis: {
@@ -64,11 +70,13 @@
                 height: 500
             };
 
-            {#let joinedData = google.visualization.data.join(data, data2, 'full', [[0, 0]], [1], [1]);#}
+
+
+            let joinedData = google.visualization.data.join({% for ds in data %}data_{{ ds["series"]|replace(" ", "_")|replace("%", "like") }},{% endfor %} 'full', [[0, 0]], [1], [1]);
 
             let chart = new google.charts.Line(document.getElementById('curve_chart'));
 
-            chart.draw(data3, google.charts.Line.convertOptions(options));
+            chart.draw(joinedData, google.charts.Line.convertOptions(options));
         }
     </script>
     {#    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"#}

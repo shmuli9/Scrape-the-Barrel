@@ -55,6 +55,8 @@ def search_for_bottle(term="macallan edition no1"):
             soup = bs(get_page(url), "html.parser")
             parse_listings(soup)
 
+    db.session.commit()
+
 
 def parse_listings(soup):
     boxes = soup.find_all("a", class_="prodbox")
@@ -84,11 +86,9 @@ def parse_listings(soup):
 
         link = BASE_URL + prod["href"]
 
-        listing = Listing(id, title, auction, price, link, sold, "Scotch Whisky Auctions")
-
-        db.session.add(listing)
-
-    db.session.commit()
+        if db.session.query(Listing.id).filter_by(id=id).scalar() is None:
+            listing = Listing(id, title, auction, price, link, sold, "Scotch Whisky Auctions")
+            db.session.add(listing)
 
 
 def get_auctions():

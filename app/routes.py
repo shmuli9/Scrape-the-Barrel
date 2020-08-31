@@ -14,7 +14,7 @@ def index():
 
 @app.route("/bottle/<bottle>")
 def bottle_search(bottle=None):
-    if len(Auction.query.all()) == 0:
+    if Auction.query.first() is None:
         get_auctions()
 
     if bottle is not None:
@@ -23,29 +23,37 @@ def bottle_search(bottle=None):
     else:
         return jsonify("Please submit a bottle to search for"), 401
 
-    # listings = [
-    #     {
-    #         listing.
-    #     } for listing in Listing.query.all()
-    # ]
 
+def query_for_bottle(query):
+    return db.session.query(Listing.name,
+                            func.round(func.avg(Listing.price), 2),
+                            Auction.end_date) \
+        .filter(Listing.sold) \
+        .filter(Listing.auction_code == Auction.auction_code) \
+        .filter(Listing.name.like(query)) \
+        .group_by(Listing.name, Auction.name) \
+        .order_by(Auction.end_date).all()
 
 
 @app.route("/charts")
 def charts():
     query_term = "No2"
 
-    query = db.session.query(Listing.name,
-                             func.round(func.avg(Listing.price), 2),
-                             Auction.end_date).filter(Listing.sold).filter(
-        Listing.auction_code == Auction.auction_code).filter(
-        Listing.name.like("%No1")).group_by(Listing.name, Auction.name).order_by(Auction.end_date).all()
+    query1 = query_for_bottle("%No1")
+    query2 = query_for_bottle("%No1 75cl")
 
-    data = [{
-        "series": query[0].name,
-        "dates": [listing[2].isoformat() for listing in query],
-        "prices": [listing[1] for listing in query]
-    }]
+    data = [
+        {
+            "series": query1[0].name,
+            "dates": [listing[2].isoformat() for listing in query1],
+            "prices": [listing[1] for listing in query1]
+        },
+        {
+            "series": query2[0].name,
+            "dates": [listing[2].isoformat() for listing in query2],
+            "prices": [listing[1] for listing in query2]
+        }
+    ]
 
     return render_template("charts.html", data=data)
 
