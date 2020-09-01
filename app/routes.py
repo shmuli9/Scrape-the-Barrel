@@ -37,22 +37,17 @@ def query_for_bottle(query):
 
 @app.route("/charts")
 def charts():
-    query_term = "No2"
-
-    query1 = query_for_bottle("%No1")
-    query2 = query_for_bottle("%No1 75cl")
+    queries = [query_for_bottle("%No1"), query_for_bottle("%No1 75cl"),
+               query_for_bottle("Macallan Edition No2"), query_for_bottle("Macallan Edition No3"),
+               query_for_bottle("Macallan Edition No4"),
+               query_for_bottle("Macallan Edition No5")]  # , query_for_bottle("%Genesis%")
 
     data = [
         {
-            "series": query1[0].name,
-            "dates": [listing[2].isoformat() for listing in query1],
-            "prices": [listing[1] for listing in query1]
-        },
-        {
-            "series": query2[0].name,
-            "dates": [listing[2].isoformat() for listing in query2],
-            "prices": [listing[1] for listing in query2]
-        }
+            "series": query[0].name,
+            "prices": [listing[1] for listing in query],
+            "dates": [listing[2].isoformat() for listing in query]
+        } for query in queries if len(query) > 0
     ]
 
     return render_template("charts.html", data=data)
