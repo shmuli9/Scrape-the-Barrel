@@ -26,7 +26,7 @@ def get_page(url):
     return content
 
 
-def search_for_bottle(term="macallan edition no1"):
+def search_for_bottle(term):
     query = urlencode({"q": term})
 
     def create_url(query):

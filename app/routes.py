@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, render_template
-from sqlalchemy.sql import func
+from flask import Blueprint, jsonify, render_template, request
+from sqlalchemy.sql import func, distinct
 
 from app.models import Auction, Listing, db
 from app.scrape import get_auctions, search_for_bottle
@@ -12,8 +12,8 @@ def index():
     return jsonify('Hello World!')
 
 
-@app.route("/bottle/<bottle>")
-def bottle_search(bottle=None):
+@app.route("/retrieve_bottle/<bottle>")
+def retrieve_bottle(bottle=None):
     if Auction.query.first() is None:
         get_auctions()
 
@@ -22,6 +22,11 @@ def bottle_search(bottle=None):
         return jsonify(f"Listings retrieved for {bottle}")
     else:
         return jsonify("Please submit a bottle to search for"), 401
+
+
+@app.route('/bottles', methods=['POST'])
+def list_bottles():
+    return render_template("", bottles=all_bottles())
 
 
 def query_for_bottle(query):
@@ -35,22 +40,31 @@ def query_for_bottle(query):
         .order_by(Auction.end_date).all()
 
 
-@app.route("/charts")
+def all_bottles():
+    return db.session.query(distinct(Listing.name)).order_by(func.length(Listing.name)).all()
+
+
+@app.route("/charts", methods=['GET', 'POST'])
 def charts():
-    queries = [query_for_bottle("%No1"), query_for_bottle("%No1 75cl"),
-               query_for_bottle("Macallan Edition No2"), query_for_bottle("Macallan Edition No3"),
-               query_for_bottle("Macallan Edition No4"),
-               query_for_bottle("Macallan Edition No5")]  # , query_for_bottle("%Genesis%")
+    if request.method == "POST":
+        bottles = request.form.getlist("bottles[]")
 
-    data = [
-        {
-            "series": query[0].name,
-            "prices": [listing[1] for listing in query],
-            "dates": [listing[2].isoformat() for listing in query]
-        } for query in queries if len(query) > 0
-    ]
+        data = []
+        for bottle in bottles:
+            query = query_for_bottle(bottle)
+            data.append(
+                {
+                    "series": query[0].name,
+                    "prices": [listing[1] for listing in query],
+                    "dates": [listing[2].isoformat() for listing in query]
+                }
+            )
 
-    return render_template("charts.html", data=data)
+        return jsonify(data)
+
+    data = []
+
+    return render_template("charts.html", data=data, all_bottles=all_bottles())
 
 
 @app.route("/auctions", methods=["GET"])

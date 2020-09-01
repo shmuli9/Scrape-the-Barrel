@@ -31,8 +31,8 @@ def create_app(config_class=Config):
     file_handler.setLevel(logging.DEBUG)
     app.logger.addHandler(file_handler)
 
-    logging.basicConfig()
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+    # logging.basicConfig()
+    # logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
 
     app.logger.setLevel(logging.DEBUG)
     app.logger.info(f'{app.config["USER_APP_NAME"]} Startup')

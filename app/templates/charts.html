@@ -10,16 +10,23 @@
 {% block main_content %}
     <h2>Bottles</h2>
     <div class="row mb-5">
+        <p>Choose which bottles to compare</p>
+        <div>
+            <form>
+                {% for bottle in all_bottles %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input series_input" type="checkbox"
+                               id="inlineCheckbox{{ bottle[0] }}"
+                               value="{{ bottle[0] }}">
+                        <label class="form-check-label" for="inlineCheckbox{{ bottle[0] }}">{{ bottle[0] }}</label>
+                    </div>
+                {% endfor %}
+            </form>
+        </div>
+    </div>
+    <div class="row mb-5">
         <div id="curve_chart" style="width: 900px; height: 500px"></div>
     </div>
-
-{#    <ul>#}
-{#        {% for bottle in data %}#}
-{#            <li>#}
-{#                {{ bottle }}: {{ data[bottle] }}#}
-{#            </li>#}
-{#        {% endfor %}#}
-{#    </ul>#}
 
 {% endblock %}
 
@@ -63,7 +70,7 @@
 
                 let zipped_rows_{{ s_id }} = _.zip(...rows_{{ s_id }})
 
-                console.log(rows_{{ s_id }}, zipped_rows_{{ s_id }})
+                {#console.log(rows_{{ s_id }}, zipped_rows_{{ s_id }})#}
                 data_{{ s_id }}.addRows(zipped_rows_{{ s_id }})
 
             {% endfor %}
@@ -86,5 +93,87 @@
 
             chart.draw(joinedData, google.charts.Line.convertOptions(options));
         }
+    </script>
+
+    <script>
+        function drawChart2(data_arr) {
+            $("#curve_chart").empty()
+
+            function joinData(data) {
+                if (data.length === 1) {
+                    return data[0]
+                } else if (data.length >= 2) {
+                    let current_join = google.visualization.data.join(data[0], data[1], 'full', [[0, 0]], [1], [1]);
+                    for (let i = 2; i < data.length; i++) {
+                        let col_arr = [1]
+                        for (let j = 2; j < i+1; j++) {
+                            col_arr.push(j)
+                        }
+                        current_join = google.visualization.data.join(current_join, data[i], 'full', [[0, 0]], col_arr, [1]);
+                    }
+                    return current_join
+                }
+            }
+
+            let datatable_arr = []
+
+            data_arr.forEach((item) => {
+                let temp_data = new google.visualization.DataTable()
+
+                datatable_arr.push(temp_data);
+
+                let rows = []
+                let dates = []
+
+                temp_data.addColumn('date', "Auctions");
+
+                item.dates.forEach((date) => {
+                    dates.push(new Date(date))
+                })
+                rows.push(dates)
+
+                temp_data.addColumn('number', item.series);
+                rows.push(item.prices)
+
+                let zipped_rows = _.zip(...rows)
+
+                temp_data.addRows(zipped_rows)
+            })
+
+            const options = {
+                chart: {
+                    title: `Average price of bottles for {% for ds in data %}{{ ds.series + ", " if not loop.last else ds.series }}{% endfor %}`,
+                    subtitle: "Average determined for each month"
+                },
+                vAxis: {
+                    format: 'currency'
+                },
+                width: 900,
+                height: 500
+            };
+
+            let joinedData = joinData(datatable_arr)
+
+            let chart = new google.charts.Line(document.getElementById('curve_chart'));
+
+            chart.draw(joinedData, google.charts.Line.convertOptions(options));
+        }
+
+        $("form :input").change(function () {
+            let bottles = []
+
+            $(this).closest('form').find('input:checkbox:checked').each(function (idx, item) {
+                bottles.push($(item).val())
+            })
+
+            $.post(window.location.href, {
+                "bottles": bottles
+            }).done((resp) => {
+                drawChart2(resp)
+            }).fail((err) => {
+                console.log(err, err.statusText)
+            })
+        });
+
     </script>
 {% endblock %}
