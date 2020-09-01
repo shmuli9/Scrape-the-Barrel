@@ -52,13 +52,14 @@ def charts():
         data = []
         for bottle in bottles:
             query = query_for_bottle(bottle)
-            data.append(
-                {
-                    "series": query[0].name,
-                    "prices": [listing[1] for listing in query],
-                    "dates": [listing[2].isoformat() for listing in query]
-                }
-            )
+            if len(query) > 0:
+                data.append(
+                    {
+                        "series": query[0].name,
+                        "prices": [listing[1] for listing in query],
+                        "dates": [listing[2].isoformat() for listing in query]
+                    }
+                )
 
         return jsonify(data)
 
