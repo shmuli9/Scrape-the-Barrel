@@ -10,12 +10,14 @@ from app.models import Auction, Listing
 BASE_URL = "https://www.scotchwhiskyauctions.com/"
 
 
-def print_list(_list):
-    for item in _list:
-        print(item)
-
-
 def get_page(url):
+    """
+    Utility function to request pages
+    Ensures that requested URL's are to the correct website
+
+    :param url:
+    :return:
+    """
     if not url.startswith(BASE_URL):
         url = BASE_URL + url
 
@@ -27,6 +29,16 @@ def get_page(url):
 
 
 def search_for_bottle(term):
+    """
+    Queries SWA for the specified search term.
+    If results are across multiple pages, it will query each page in turn
+
+    Each soup (response object) is then parsed by parse_listings() and added to the DB
+
+    :param term: query term to search for on SWA
+    :return:
+    """
+
     query = urlencode({"q": term})
 
     def create_url(query):
@@ -59,6 +71,15 @@ def search_for_bottle(term):
 
 
 def parse_listings(soup):
+    """
+    Parses listings from soup object
+    Tailored to SWA search page
+
+    If parsed data has changed "sold" status, then existing Listing is updated
+
+    :param soup:
+    :return:
+    """
     boxes = soup.find_all("a", class_="prodbox")
 
     for prod in boxes:
@@ -74,12 +95,11 @@ def parse_listings(soup):
         auction = Auction.query.filter_by(auction_code=auction_code).first()
 
         # sold - defined by "Winning bid" text and lack of .reserve or .befirst
-        sold = not \
-            (
+        sold = not (
                 prod.find("span", class_="befirst")
                 or prod.find("span", class_="reserve")
                 or prod.find("span", class_="noreserve")
-            ) and bool(prod.find("span", class_="price"))
+        ) and bool(prod.find("span", class_="price"))
 
         # price
         price = prod.find("span", class_="price").text.strip().replace("£", "") if sold else None
@@ -94,6 +114,20 @@ def parse_listings(soup):
             # if existing entry wasnt sold, update sold status and price
             existing_listing.price = price
             existing_listing.sold = sold
+
+
+def update_all():
+    """
+    Retrieves all bottles listed in "my bottles.txt" in the app folder, adding/updating the local DB
+
+    :return:
+    """
+    for bottle in open("app/my bottles.txt", "r").read().split("\n"):
+        if bottle:
+            print(f"Retrieving {bottle}...")
+            search_for_bottle(bottle)
+            print(f"Retrieved {bottle} successfully")
+    print("Update all task completed")
 
 
 def get_auctions():

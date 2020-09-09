@@ -1,8 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
-from sqlalchemy.sql import func, distinct
 
-from app.models import Auction, Listing, db
-from app.scrape import get_auctions, search_for_bottle
+from app.db import *
+from app.scrape import get_auctions, search_for_bottle, update_all
 from app.thread import CThread
 
 app = Blueprint('app', __name__, url_prefix="/")
@@ -15,8 +14,12 @@ def index():
 
 @app.route("/retrieve_bottle/<bottle>")
 def retrieve_bottle(bottle=None):
-    if Auction.query.first() is None:
-        get_auctions()
+    """
+    Scrapes an individual bottle from SWA
+    :param bottle:
+    :return:
+    """
+    check_auctions()
 
     if bottle is not None:
         search_for_bottle(bottle)
@@ -27,13 +30,12 @@ def retrieve_bottle(bottle=None):
 
 @app.route("/retrieve_all/")
 def retrieve_all():
-    def update_all():
-        for bottle in open("app/my bottles.txt", "r").read().split("\n"):
-            if bottle:
-                print(f"Retrieving {bottle}...")
-                search_for_bottle(bottle)
-                print(f"Retrieved {bottle} successfully")
-        print("Update all task completed")
+    """
+    Retrieves all bottles listed in "my bottles.txt" in the app folder
+
+    Uses threading (CThread) to allow the flask app to continue while long running update task finishes
+    """
+    check_auctions()
 
     t_update_all = CThread(target=update_all)
     t_update_all.start()
@@ -41,33 +43,9 @@ def retrieve_all():
     return jsonify("Update task started")
 
 
-@app.route('/bottles', methods=['POST'])
-def list_bottles():
-    return render_template("", bottles=all_bottles())
-
-
-def query_for_bottle(query):
-    return db.session.query(Listing.name,
-                            func.round(func.avg(Listing.price), 2),
-                            Auction.end_date) \
-        .filter(Listing.sold) \
-        .filter(Listing.auction_code == Auction.auction_code) \
-        .filter(Listing.name.like(query)) \
-        .group_by(Listing.name, Auction.name) \
-        .order_by(Auction.end_date).all()
-
-
-def all_bottles():
-    return db.session.query(distinct(Listing.name)).order_by(func.length(Listing.name)).all()
-
-
-def market_trends():
-    return db.session.query(func.round(func.avg(Listing.price), 2),
-                            Auction.end_date) \
-        .filter(Listing.sold) \
-        .filter(Listing.auction_code == Auction.auction_code) \
-        .group_by(Auction.name) \
-        .order_by(Auction.end_date).all()
+# @app.route('/bottles', methods=['POST'])
+# def list_bottles():
+#     return render_template("", bottles=all_bottles())
 
 
 @app.route("/charts", methods=['GET', 'POST'])
