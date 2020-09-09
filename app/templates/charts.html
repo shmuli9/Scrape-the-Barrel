@@ -9,10 +9,17 @@
 
 {% block main_content %}
     <h2>Bottles</h2>
+
     <div class="row mb-5">
         <p>Choose which bottles to compare</p>
+    </div>
+    <div class="row mb-5">
         <div>
-            <form>
+            <form id="checkboxes">
+                <input class="form-check-input series_input" type="checkbox"
+                       id="market_trends"
+                       value="market">
+                <label class="form-check-label" for="market_trends">Market</label>
                 {% for bottle in all_bottles %}
                     <div class="form-check form-check-inline">
                         <input class="form-check-input series_input" type="checkbox"
@@ -106,7 +113,7 @@
                     let current_join = google.visualization.data.join(data[0], data[1], 'full', [[0, 0]], [1], [1]);
                     for (let i = 2; i < data.length; i++) {
                         let col_arr = [1]
-                        for (let j = 2; j < i+1; j++) {
+                        for (let j = 2; j < i + 1; j++) {
                             col_arr.push(j)
                         }
                         current_join = google.visualization.data.join(current_join, data[i], 'full', [[0, 0]], col_arr, [1]);
@@ -162,7 +169,20 @@
         $("form :input").change(function () {
             let bottles = []
 
+            if ($(this).val() === "market" && $(this).is(":checked")) {
+                $("form#checkboxes").find('input:checkbox:checked').each(function (idx, item) {
+                    $(item).attr("checked", false)
+                });
+            }
+
             $(this).closest('form').find('input:checkbox:checked').each(function (idx, item) {
+                {#if ($(item).val() === "all" && $(item).is(":checked")) {
+                    $("form#checkboxes").find('input:checkbox').each(function (idx, item) {
+                        $(item).attr("checked", true)
+                    });
+                    bottles.push("all")
+                    return false
+                }#}
                 bottles.push($(item).val())
             })
 

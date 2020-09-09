@@ -86,9 +86,14 @@ def parse_listings(soup):
 
         link = BASE_URL + prod["href"]
 
-        if db.session.query(Listing.id).filter_by(id=id).scalar() is None:
+        existing_listing = Listing.query.filter_by(id=id).first()
+        if existing_listing is None:
             listing = Listing(id, title, auction, price, link, sold, "Scotch Whisky Auctions")
             db.session.add(listing)
+        elif sold and not existing_listing.sold:
+            # if existing entry wasnt sold, update sold status and price
+            existing_listing.price = price
+            existing_listing.sold = sold
 
 
 def get_auctions():

@@ -3,6 +3,7 @@ from sqlalchemy.sql import func, distinct
 
 from app.models import Auction, Listing, db
 from app.scrape import get_auctions, search_for_bottle
+from app.thread import CThread
 
 app = Blueprint('app', __name__, url_prefix="/")
 
@@ -22,6 +23,22 @@ def retrieve_bottle(bottle=None):
         return jsonify(f"Listings retrieved for {bottle}")
     else:
         return jsonify("Please submit a bottle to search for"), 401
+
+
+@app.route("/retrieve_all/")
+def retrieve_all():
+    def update_all():
+        for bottle in open("app/my bottles.txt", "r").read().split("\n"):
+            if bottle:
+                print(f"Retrieving {bottle}...")
+                search_for_bottle(bottle)
+                print(f"Retrieved {bottle} successfully")
+        print("Update all task completed")
+
+    t_update_all = CThread(target=update_all)
+    t_update_all.start()
+
+    return jsonify("Update task started")
 
 
 @app.route('/bottles', methods=['POST'])
@@ -44,10 +61,28 @@ def all_bottles():
     return db.session.query(distinct(Listing.name)).order_by(func.length(Listing.name)).all()
 
 
+def market_trends():
+    return db.session.query(func.round(func.avg(Listing.price), 2),
+                            Auction.end_date) \
+        .filter(Listing.sold) \
+        .filter(Listing.auction_code == Auction.auction_code) \
+        .group_by(Auction.name) \
+        .order_by(Auction.end_date).all()
+
+
 @app.route("/charts", methods=['GET', 'POST'])
 def charts():
     if request.method == "POST":
         bottles = request.form.getlist("bottles[]")
+
+        if "market" in bottles:
+            query = market_trends()
+            data = [{
+                "series": "Market",
+                "prices": [listing[0] for listing in query],
+                "dates": [listing[1].isoformat() for listing in query]
+            }]
+            return jsonify(data)
 
         data = []
         for bottle in bottles:
